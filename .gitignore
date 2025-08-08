@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environments
+venv/
+.env
+*.env
+
+# Flask/cache/runtime
+src/cache/
+# Persisted users (commit intentionally if you want to share defaults)
+src/users.json
+
+# Test/coverage
+.pytest_cache/
+.coverage
+coverage/
+
+# Java
+out/
+*.class
+
+# IDEs/Editors
+.idea/
+*.iml
+.vscode/

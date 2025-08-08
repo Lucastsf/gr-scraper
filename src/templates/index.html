@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goodreads Book Club</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .filter-control {
+            display: flex;
+            align-items: center;
+        }
+        label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        select, input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .book-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .book-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .book-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        .book-author {
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        .book-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .book-pages, .book-users-count {
+            background-color: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .book-users {
+            margin-top: 10px;
+        }
+        .user-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .user-tag {
+            background-color: #e0f7fa;
+            color: #00838f;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+        .cache-status {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+        .cache-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .cache-hit {
+            background-color: #4caf50;
+        }
+        .cache-miss {
+            background-color: #ff9800;
+        }
+        .cache-controls {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+        }
+        .cache-toggle {
+            margin-right: 10px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        .loading-progress {
+            margin-top: 10px;
+            height: 4px;
+            background-color: #ecf0f1;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .loading-bar {
+            height: 100%;
+            width: 0;
+            background-color: #3498db;
+            transition: width 0.3s ease;
+        }
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            padding: 20px;
+        }
+        .retry-button {
+            display: inline-block;
+            margin-top: 10px;
+            background-color: #e74c3c;
+        }
+        .retry-button:hover {
+            background-color: #c0392b;
+        }
+        .instructions {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            font-size: 1.1em;
+        }
+        .user-selection {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .user-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 10px 0;
+        }
+        .user-checkboxes label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .user-checkbox {
+            margin-right: 5px;
+        }
+        .user-selection-buttons {
+            margin-top: 10px;
+        }
+        .user-selection-buttons button {
+            margin-right: 10px;
+        }
+
+        /* Tab styles */
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+            transition: background-color 0.3s;
+        }
+        .tab:hover {
+            background-color: #e9ecef;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .user-dropdown {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+            min-width: 150px;
+        }
+        .short-reads-controls {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .book-score {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .book-rating {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        .user-management {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .user-management input {
+            min-width: 180px;
+        }
+        .user-action-message {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Goodreads Book Club</h1>
+
+    <!-- Tab Navigation -->
+    <div class="tabs">
+        <div class="tab active" data-tab="popular-books">Popular Books</div>
+        <div class="tab" data-tab="short-reads">Short Reads</div>
+    </div>
+
+    <!-- Popular Books Tab Content -->
+    <div id="popular-books" class="tab-content active">
+        <div class="controls">
+            <div class="filter-control">
+                <label for="min-users">Minimum Users:</label>
+                <input type="number" id="min-users" min="1" max="10" value="3">
+                <button id="apply-filter">Apply Filter</button>
+            </div>
+
+            <div class="sort-control">
+                <label for="sort-by">Sort By:</label>
+                <select id="sort-by">
+                    <option value="popularity">Popularity</option>
+                    <option value="title">Title</option>
+                    <option value="author">Author</option>
+                    <option value="pages">Page Count</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="cache-status" id="cache-status" style="display: none;">
+            <span class="cache-indicator" id="cache-indicator"></span>
+            <span id="cache-message">Loading...</span>
+            <div class="cache-controls">
+                <label class="cache-toggle">
+                    <input type="checkbox" id="use-cache" checked>
+                    Use cache
+                </label>
+                <button id="clear-cache">Clear Cache</button>
+            </div>
+        </div>
+
+        <div class="user-selection">
+            <label>Select Users:</label>
+            <div class="user-checkboxes" id="user-checkboxes"></div>
+            <div class="user-selection-buttons">
+                <button id="select-all-users">Select All</button>
+                <button id="deselect-all-users">Deselect All</button>
+            </div>
+            <div class="user-management">
+                <input type="text" id="new-user-name" placeholder="Name">
+                <input type="text" id="new-user-id" placeholder="Goodreads ID">
+                <button id="add-user">Add User</button>
+                <button id="delete-selected-users">Delete Selected</button>
+                <span id="user-action-message" class="user-action-message"></span>
+            </div>
+        </div>
+
+        <div id="book-container" class="book-list">
+            <div class="instructions">Select users and click "Apply Filter" to load books</div>
+        </div>
+    </div>
+
+    <!-- Short Reads Tab Content -->
+    <div id="short-reads" class="tab-content">
+        <div class="short-reads-controls">
+            <label for="user-select">Select User:</label>
+            <select id="user-select" class="user-dropdown">
+                <option value="">-- Select a user --</option>
+            </select>
+            <button id="get-top-books">Get Top Books</button>
+        </div>
+        <div id="top-books-container" class="book-list">
+            <div class="instructions">Select a user and click "Get Top Books" to see their top 50 books based on rating and length</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching functionality
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+
+                    // Update active tab
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    // Update active content
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.id === tabId) {
+                            content.classList.add('active');
+                        }
+                    });
+                });
+            });
+
+            // Popular Books Tab Elements
+            const bookContainer = document.getElementById('book-container');
+            const minUsersInput = document.getElementById('min-users');
+            const applyFilterBtn = document.getElementById('apply-filter');
+            const sortBySelect = document.getElementById('sort-by');
+            const selectAllBtn = document.getElementById('select-all-users');
+            const deselectAllBtn = document.getElementById('deselect-all-users');
+            const cacheStatus = document.getElementById('cache-status');
+            const cacheIndicator = document.getElementById('cache-indicator');
+            const cacheMessage = document.getElementById('cache-message');
+            const useCacheCheckbox = document.getElementById('use-cache');
+            const clearCacheBtn = document.getElementById('clear-cache');
+            const userCheckboxesContainer = document.getElementById('user-checkboxes');
+            const newUserNameInput = document.getElementById('new-user-name');
+            const newUserIdInput = document.getElementById('new-user-id');
+            const addUserBtn = document.getElementById('add-user');
+            const deleteSelectedBtn = document.getElementById('delete-selected-users');
+            const userActionMessage = document.getElementById('user-action-message');
+
+            // Short Reads Tab Elements
+            const userSelect = document.getElementById('user-select');
+            const getTopBooksBtn = document.getElementById('get-top-books');
+            const topBooksContainer = document.getElementById('top-books-container');
+
+            let books = [];
+            let responseMetadata = null;
+
+            // Event listeners
+            applyFilterBtn.addEventListener('click', fetchBooks);
+            sortBySelect.addEventListener('change', sortBooks);
+            selectAllBtn.addEventListener('click', () => {
+                document.querySelectorAll('.user-checkbox').forEach(checkbox => checkbox.checked = true);
+            });
+            deselectAllBtn.addEventListener('click', () => {
+                document.querySelectorAll('.user-checkbox').forEach(checkbox => checkbox.checked = false);
+            });
+
+            // Cache control event listeners
+            useCacheCheckbox.addEventListener('change', () => {
+                // Update UI to reflect cache status
+                updateCacheStatusUI();
+            });
+
+            clearCacheBtn.addEventListener('click', async () => {
+                try {
+                    // Disable the button while clearing cache
+                    clearCacheBtn.disabled = true;
+                    clearCacheBtn.textContent = 'Clearing...';
+
+                    // Call the server to clear the cache
+                    const response = await fetch('/clear_cache', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        // Show success message
+                        cacheMessage.textContent = result.message;
+                        // Force a fresh fetch
+                        fetchBooks(true);
+                    } else {
+                        // Show error message
+                        cacheMessage.textContent = `Error: ${result.message || 'Failed to clear cache'}`;
+                    }
+                } catch (error) {
+                    console.error('Error clearing cache:', error);
+                    cacheMessage.textContent = `Error: ${error.message || 'Failed to clear cache'}`;
+                } finally {
+                    // Re-enable the button
+                    clearCacheBtn.disabled = false;
+                    clearCacheBtn.textContent = 'Clear Cache';
+                }
+            });
+
+            // User management handlers
+            addUserBtn.addEventListener('click', async () => {
+                const name = newUserNameInput.value.trim();
+                const id = newUserIdInput.value.trim();
+                userActionMessage.textContent = '';
+                if (!name || !id) {
+                    userActionMessage.textContent = 'Enter a name and Goodreads ID.';
+                    return;
+                }
+                try {
+                    addUserBtn.disabled = true;
+                    const res = await fetch('/users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, id })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        userActionMessage.textContent = data.error || 'Failed to add user';
+                    } else {
+                        userActionMessage.textContent = 'User added';
+                        newUserNameInput.value = '';
+                        newUserIdInput.value = '';
+                        await loadUsers();
+                        // Optionally refresh book results if any
+                        fetchBooks(true);
+                    }
+                } catch (e) {
+                    userActionMessage.textContent = e.message || 'Failed to add user';
+                } finally {
+                    addUserBtn.disabled = false;
+                }
+            });
+
+            deleteSelectedBtn.addEventListener('click', async () => {
+                const selected = Array.from(document.querySelectorAll('.user-checkbox:checked')).map(cb => cb.value);
+                userActionMessage.textContent = '';
+                if (selected.length === 0) {
+                    userActionMessage.textContent = 'Select at least one user to delete.';
+                    return;
+                }
+                try {
+                    deleteSelectedBtn.disabled = true;
+                    const res = await fetch('/users', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ names: selected })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        userActionMessage.textContent = data.error || 'Failed to delete users';
+                    } else {
+                        userActionMessage.textContent = `Deleted: ${data.deleted.join(', ')}`;
+                        await loadUsers();
+                        // Optionally refresh book results if any
+                        fetchBooks(true);
+                    }
+                } catch (e) {
+                    userActionMessage.textContent = e.message || 'Failed to delete users';
+                } finally {
+                    deleteSelectedBtn.disabled = false;
+                }
+            });
+
+            // Maximum number of retries
+            const MAX_RETRIES = 3;
+            let progressInterval;
+
+            // Track current request to allow cancellation
+            let currentController = null;
+
+            // Function to fetch books with retry logic
+            async function fetchBooksWithRetry(queryString, retryCount = 0) {
+                try {
+                    // Update loading indicator with retry information if applicable
+                    if (retryCount > 0) {
+                        bookContainer.innerHTML = `
+                            <div class="loading">
+                                Loading books... (Retry ${retryCount}/${MAX_RETRIES})
+                                <div class="loading-progress">
+                                    <div class="loading-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        bookContainer.innerHTML = `
+                            <div class="loading">
+                                Loading books...
+                                <div class="loading-progress">
+                                    <div class="loading-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Simulate progress updates
+                    const loadingBar = document.querySelector('.loading-bar');
+                    let progress = 0;
+                    progressInterval = setInterval(() => {
+                        // Increase progress up to 90% (save the last 10% for actual completion)
+                        if (progress < 90) {
+                            progress += Math.random() * 5;
+                            loadingBar.style.width = `${Math.min(progress, 90)}%`;
+                        }
+                    }, 500);
+
+                    // Cancel any existing request
+                    if (currentController) {
+                        console.log('Cancelling previous request');
+                        currentController.abort();
+                    }
+
+                    // Create a fetch request with a timeout
+                    currentController = new AbortController();
+                    const timeoutId = setTimeout(() => currentController.abort(), 120000); // 2 minute timeout (increased from 60s)
+
+                    const response = await fetch(`/get_popular_books?${queryString}`, {
+                        signal: currentController.signal,
+                        // Add cache control headers to prevent caching issues
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache',
+                            'Expires': '0'
+                        }
+                    });
+
+                    clearTimeout(timeoutId);
+                    clearInterval(progressInterval);
+
+                    // Reset the controller since this request is complete
+                    currentController = null;
+
+                    // Complete the progress bar
+                    if (loadingBar) {
+                        loadingBar.style.width = '100%';
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`Server responded with status: ${response.status}`);
+                    }
+
+                    const responseData = await response.json();
+
+                    // Handle the new response format
+                    if (responseData.books) {
+                        // New format with metadata
+                        books = responseData.books;
+                        responseMetadata = responseData.metadata;
+
+                        // Update cache status UI
+                        updateCacheStatusUI();
+                    } else {
+                        // Old format (direct array of books)
+                        books = responseData;
+                        responseMetadata = null;
+                        cacheStatus.style.display = 'none';
+                    }
+
+                    sortBooks();
+
+                } catch (error) {
+                    if (progressInterval) {
+                        clearInterval(progressInterval);
+                    }
+
+                    // Reset the controller if this was an abort that we initiated
+                    if (error.name === 'AbortError' && currentController) {
+                        currentController = null;
+                    }
+
+                    console.error('Error:', error);
+
+                    // Handle different types of errors
+                    let errorMessage = error.message;
+
+                    if (wasManuallyAborted) {
+                        // This request was canceled because a new one was started
+                        console.log('Request was canceled because a new one was started');
+                        return; // Exit early, no need to show error or retry
+                    } else if (error.name === 'AbortError') {
+                        errorMessage = 'Request timed out. The server is taking too long to respond.';
+                    } else if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+                        errorMessage = 'Unable to connect to the server. Please check your internet connection or try again later.';
+                    } else if (error.message.includes('network')) {
+                        errorMessage = 'Network error. The connection was interrupted.';
+                    }
+
+                    // If we haven't exceeded max retries, try again
+                    // Don't retry if this was an abort that we initiated (new request started)
+                    const wasManuallyAborted = error.name === 'AbortError' && currentController === null;
+
+                    if (retryCount < MAX_RETRIES && 
+                        !wasManuallyAborted &&
+                        (error.name === 'AbortError' || 
+                         error instanceof TypeError || 
+                         error.message.includes('network'))) {
+
+                        // Wait before retrying (exponential backoff)
+                        const delay = Math.pow(2, retryCount) * 1000;
+                        console.log(`Retrying in ${delay/1000} seconds...`);
+
+                        bookContainer.innerHTML = `
+                            <div class="loading">
+                                Connection interrupted. Retrying in ${delay/1000} seconds...
+                                <div class="loading-progress">
+                                    <div class="loading-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        `;
+
+                        setTimeout(() => {
+                            fetchBooksWithRetry(queryString, retryCount + 1);
+                        }, delay);
+
+                    } else {
+                        // Max retries exceeded or non-retriable error
+                        bookContainer.innerHTML = `
+                            <div class="error">
+                                Error loading books: ${errorMessage}
+                                <br>
+                                <button class="retry-button" id="retry-button">Retry</button>
+                            </div>
+                        `;
+
+                        // Add event listener to retry button
+                        document.getElementById('retry-button').addEventListener('click', () => {
+                            fetchBooks();
+                        });
+                    }
+                }
+            }
+
+            // Function to update cache status UI
+            function updateCacheStatusUI() {
+                if (!responseMetadata) {
+                    cacheStatus.style.display = 'none';
+                    return;
+                }
+
+                cacheStatus.style.display = 'flex';
+
+                if (responseMetadata.from_cache) {
+                    cacheIndicator.classList.add('cache-hit');
+                    cacheIndicator.classList.remove('cache-miss');
+                    cacheMessage.textContent = `Data loaded from cache (${new Date(responseMetadata.timestamp).toLocaleTimeString()})`;
+                } else {
+                    cacheIndicator.classList.add('cache-miss');
+                    cacheIndicator.classList.remove('cache-hit');
+                    cacheMessage.textContent = `Fresh data loaded (${new Date(responseMetadata.timestamp).toLocaleTimeString()})`;
+                }
+            }
+
+            // Main fetch function that initiates the fetch with retry
+            function fetchBooks(forceRefresh = false) {
+                const minCount = minUsersInput.value;
+
+                // Get selected users
+                const selectedUsers = Array.from(document.querySelectorAll('.user-checkbox'))
+                    .filter(checkbox => checkbox.checked)
+                    .map(checkbox => checkbox.value);
+
+                // Ensure at least one user is selected
+                if (selectedUsers.length === 0) {
+                    bookContainer.innerHTML = `<div class="error">Please select at least one user</div>`;
+                    return;
+                }
+
+                // Build query string
+                let queryString = `min_count=${minCount}`;
+                selectedUsers.forEach(user => {
+                    queryString += `&users=${encodeURIComponent(user)}`;
+                });
+
+                // Add cache parameter based on checkbox
+                queryString += `&use_cache=${useCacheCheckbox.checked}`;
+
+                // If forcing a refresh, add a timestamp to bust the cache
+                if (forceRefresh) {
+                    queryString += `&_t=${Date.now()}`;
+                }
+
+                // Start the fetch process with retry logic
+                fetchBooksWithRetry(queryString);
+            }
+
+            function sortBooks() {
+                // If no books are loaded yet, don't try to sort
+                if (books.length === 0) {
+                    return;
+                }
+
+                const sortBy = sortBySelect.value;
+
+                switch(sortBy) {
+                    case 'popularity':
+                        books.sort((a, b) => b.user_count - a.user_count);
+                        break;
+                    case 'title':
+                        books.sort((a, b) => a.title.localeCompare(b.title));
+                        break;
+                    case 'author':
+                        books.sort((a, b) => a.author.localeCompare(b.author));
+                        break;
+                    case 'pages':
+                        books.sort((a, b) => {
+                            // Handle null page counts
+                            const aPages = a.page_count || Number.MAX_SAFE_INTEGER;
+                            const bPages = b.page_count || Number.MAX_SAFE_INTEGER;
+                            return aPages - bPages;
+                        });
+                        break;
+                }
+
+                displayBooks();
+            }
+
+            function displayBooks() {
+                if (books.length === 0) {
+                    bookContainer.innerHTML = '<div class="loading">No books found matching your criteria.</div>';
+                    return;
+                }
+
+                bookContainer.innerHTML = '';
+
+                books.forEach(book => {
+                    const bookCard = document.createElement('div');
+                    bookCard.className = 'book-card';
+
+                    const pageCount = book.page_count ? `${book.page_count} pages` : 'Unknown pages';
+
+                    const userTags = book.users.map(user => 
+                        `<span class="user-tag">${user}</span>`
+                    ).join('');
+
+                    bookCard.innerHTML = `
+                        <div class="book-title">${book.title}</div>
+                        <div class="book-author">by ${book.author}</div>
+                        <div class="book-details">
+                            <span class="book-pages">${pageCount}</span>
+                            <span class="book-users-count">${book.user_count} users</span>
+                        </div>
+                        <div class="book-users">
+                            <div class="user-list">${userTags}</div>
+                        </div>
+                    `;
+
+                    bookContainer.appendChild(bookCard);
+                });
+            }
+
+            // Short Reads Tab Functionality
+            let topBooks = [];
+
+            // Event listener for Get Top Books button
+            getTopBooksBtn.addEventListener('click', fetchTopBooks);
+
+            // Function to fetch top books for a user
+            function fetchTopBooks() {
+                const username = userSelect.value;
+
+                if (!username) {
+                    topBooksContainer.innerHTML = '<div class="error">Please select a user</div>';
+                    return;
+                }
+
+                topBooksContainer.innerHTML = `
+                    <div class="loading">
+                        Loading top books for ${username}...
+                        <div class="loading-progress">
+                            <div class="loading-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                `;
+
+                // Simulate progress updates
+                const loadingBar = document.querySelector('#short-reads .loading-bar');
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    if (progress < 90) {
+                        progress += Math.random() * 5;
+                        loadingBar.style.width = `${Math.min(progress, 90)}%`;
+                    }
+                }, 500);
+
+                // Create a fetch request with a timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+                fetch(`/get_top_books?username=${encodeURIComponent(username)}`, {
+                    signal: controller.signal,
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                })
+                .then(response => {
+                    clearTimeout(timeoutId);
+                    clearInterval(progressInterval);
+
+                    // Complete the progress bar
+                    if (loadingBar) {
+                        loadingBar.style.width = '100%';
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`Server responded with status: ${response.status}`);
+                    }
+
+                    return response.json();
+                })
+                .then(data => {
+                    topBooks = data;
+                    displayTopBooks();
+                })
+                .catch(error => {
+                    clearInterval(progressInterval);
+
+                    let errorMessage = error.message;
+                    if (error.name === 'AbortError') {
+                        errorMessage = 'Request timed out. The server is taking too long to respond.';
+                    } else if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+                        errorMessage = 'Unable to connect to the server. Please check your internet connection or try again later.';
+                    }
+
+                    topBooksContainer.innerHTML = `
+                        <div class="error">
+                            Error loading books: ${errorMessage}
+                            <br>
+                            <button class="retry-button" id="retry-top-books">Retry</button>
+                        </div>
+                    `;
+
+                    // Add event listener to retry button
+                    document.getElementById('retry-top-books').addEventListener('click', fetchTopBooks);
+                });
+            }
+
+            // Function to display top books
+            function displayTopBooks() {
+                if (topBooks.length === 0) {
+                    topBooksContainer.innerHTML = '<div class="loading">No books found for this user.</div>';
+                    return;
+                }
+
+                topBooksContainer.innerHTML = '';
+
+                topBooks.forEach(book => {
+                    const bookCard = document.createElement('div');
+                    bookCard.className = 'book-card';
+
+                    const pageCount = book.page_count ? `${book.page_count} pages` : 'Unknown pages';
+                    const rating = book.rating ? `${book.rating.toFixed(2)}` : 'No rating';
+                    const score = book.score ? `${book.score.toFixed(4)}` : 'No score';
+
+                    bookCard.innerHTML = `
+                        <div class="book-title">${book.title}</div>
+                        <div class="book-author">by ${book.author}</div>
+                        <div class="book-details">
+                            <span class="book-pages">${pageCount}</span>
+                            <span class="book-rating">Rating: ${rating}</span>
+                        </div>
+                        <div class="book-details">
+                            <span class="book-score">Score: ${score}</span>
+                            <span>Rank: #${book.rank}</span>
+                        </div>
+                    `;
+
+                    topBooksContainer.appendChild(bookCard);
+                });
+            }
+
+            // Load users from server and render
+            async function loadUsers() {
+                try {
+                    const res = await fetch('/users');
+                    const data = await res.json();
+                    const users = Array.isArray(data.users) ? data.users : [];
+                    renderUsers(users);
+                } catch (e) {
+                    console.error('Failed to load users', e);
+                }
+            }
+
+            function renderUsers(users) {
+                // Render checkboxes
+                userCheckboxesContainer.innerHTML = users.map(u => `
+                    <label><input type="checkbox" class="user-checkbox" value="${u.name}" checked> ${u.name}</label>
+                `).join('');
+
+                // Render dropdown
+                userSelect.innerHTML = '<option value="">-- Select a user --</option>' + users.map(u => `
+                    <option value="${u.name}">${u.name}</option>
+                `).join('');
+            }
+
+            // Initial load
+            loadUsers();
+        });
+    </script>
+</body>
+</html>
