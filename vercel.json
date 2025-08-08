@@ -1,9 +1,10 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/get_popular_books", "destination": "https://RENDER_BACKEND_URL/get_popular_books" },
-    { "source": "/get_top_books", "destination": "https://RENDER_BACKEND_URL/get_top_books" },
-    { "source": "/clear_cache", "destination": "https://RENDER_BACKEND_URL/clear_cache" },
-    { "source": "/users", "destination": "https://RENDER_BACKEND_URL/users" }
+    { "source": "/", "destination": "/src/templates/index.html" },
+    { "source": "/get_popular_books", "destination": "https://https://gr-scraper.onrender.com/get_popular_books" },
+    { "source": "/get_top_books", "destination": "https://https://gr-scraper.onrender.com/get_top_books" },
+    { "source": "/clear_cache", "destination": "https://https://gr-scraper.onrender.com/clear_cache" },
+    { "source": "/users", "destination": "https://https://gr-scraper.onrender.com/users" }
   ]
 } 
