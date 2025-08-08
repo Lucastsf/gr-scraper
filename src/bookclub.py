@@ -15,12 +15,14 @@ headers = {
 }
 
 # Create cache directory if it doesn't exist
-CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
+DEFAULT_CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
+CACHE_DIR = os.environ.get('CACHE_DIR', DEFAULT_CACHE_DIR)
 if not os.path.exists(CACHE_DIR):
-    os.makedirs(CACHE_DIR)
+    os.makedirs(CACHE_DIR, exist_ok=True)
 
 # Users file for persistence
-USERS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'users.json')
+DEFAULT_USERS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'users.json')
+USERS_FILE = os.environ.get('USERS_FILE', DEFAULT_USERS_FILE)
 
 # Default users used on first run if no users.json exists or cannot be read
 DEFAULT_USER_DATA = {
@@ -135,6 +137,8 @@ def load_users():
 def save_users(users_mapping):
     """Persist the given users mapping to users.json."""
     try:
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
         with open(USERS_FILE, 'w') as f:
             json.dump(users_mapping, f, indent=2, sort_keys=True)
         return True

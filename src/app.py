@@ -5,6 +5,7 @@ import json
 import time
 import logging
 from datetime import datetime
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -238,5 +239,7 @@ def get_top_books():
 
 if __name__ == '__main__':
     # Increase timeout and configure server for better handling of long requests
-    app.run(host='0.0.0.0', debug=True, port=5001, threaded=True, 
+    port = int(os.environ.get('PORT', 5001))
+    debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    app.run(host='0.0.0.0', debug=debug, port=port, threaded=True, 
             use_reloader=False)  # Disable reloader to avoid duplicate processes
