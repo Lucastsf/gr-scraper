@@ -245,7 +245,7 @@ def get_book_page_count(book_url):
 
     return None
 
-def find_popular_books_data(user_data, min_count=3, selected_users=None, use_cache=True):
+def find_popular_books_data(user_data, min_count=3, selected_users=None, use_cache=True, on_progress=None):
     """Finds books that appear in the to-read lists of multiple users, filtered by min_count, and returns the data.
     Results are cached to disk to speed up future queries with the same parameters.
 
@@ -253,6 +253,18 @@ def find_popular_books_data(user_data, min_count=3, selected_users=None, use_cac
     then identifies books that appear in multiple lists (meeting the min_count threshold),
     and only then fetches page counts for those filtered books.
     """
+    def _emit(message, percent=None, stage=None, extra=None):
+        if on_progress:
+            try:
+                on_progress({
+                    'message': message,
+                    'percent': percent,
+                    'stage': stage,
+                    'extra': extra or {}
+                })
+            except Exception:
+                pass
+
     # If no users are selected, use all users
     if selected_users is None or len(selected_users) == 0:
         selected_users = list(user_data.keys())
@@ -263,6 +275,7 @@ def find_popular_books_data(user_data, min_count=3, selected_users=None, use_cac
         cached_data, cache_hit = get_from_cache(cache_key)
 
         if cache_hit:
+            _emit("Cache hit", percent=100, stage='cache_hit', extra={'cache_key': cache_key})
             return cached_data
 
     # If not in cache or cache disabled, fetch the data
@@ -271,12 +284,12 @@ def find_popular_books_data(user_data, min_count=3, selected_users=None, use_cac
     error_users = []
 
     # Process each user's data - first pass: get book lists without page counts
-    print("Phase 1: Collecting book lists from all users (without page counts)...")
+    _emit("Phase 1: Collecting book lists from all users (without page counts)...", percent=1, stage='phase1_start')
     for username in selected_users:
         try:
             if username in user_data:
                 user_id = user_data[username]
-                print(f"Fetching data for user {username}...")
+                _emit(f"Fetching data for user {username}...", stage='user_start', extra={'user': username})
 
                 # Add a small delay between user requests to avoid overwhelming the server
                 if processed_users:
@@ -300,17 +313,16 @@ def find_popular_books_data(user_data, min_count=3, selected_users=None, use_cac
                         }
 
                 processed_users.append(username)
-                print(f"Successfully processed data for user {username}")
+                _emit(f"Successfully processed data for user {username}", stage='user_done', extra={'user': username})
         except Exception as e:
             error_message = str(e)
             print(f"Error processing data for user {username}: {error_message}")
             error_users.append(username)
+            _emit(f"Error processing user {username}: {error_message}", stage='user_error', extra={'user': username})
             # Continue with other users even if one fails
 
     # Log summary of processing
-    print(f"Processed {len(processed_users)} users successfully: {', '.join(processed_users)}")
-    if error_users:
-        print(f"Failed to process {len(error_users)} users: {', '.join(error_users)}")
+    _emit(f"Processed {len(processed_users)} users successfully", stage='phase1_done', extra={'processed': processed_users, 'errors': error_users})
 
     # Filter books by minimum count
     popular_books = []
@@ -321,8 +333,11 @@ def find_popular_books_data(user_data, min_count=3, selected_users=None, use_cac
     # Sort the popular books by popularity
     popular_books = sorted(popular_books, key=lambda x: len(x['users']), reverse=True)
 
+    _emit(f"Found {len(popular_books)} popular book candidates", stage='filter_done', extra={'count': len(popular_books)})
+
     # Phase 2: Get page counts only for popular books
-    print(f"Phase 2: Fetching page counts for {len(popular_books)} popular books...")
+    _emit(f"Phase 2: Fetching page counts for {len(popular_books)} popular books...", stage='phase2_start')
+    total_popular = max(1, len(popular_books))
     for i, book in enumerate(popular_books):
         # Add a small delay between requests to avoid overwhelming the server
         if i > 0:
@@ -332,9 +347,10 @@ def find_popular_books_data(user_data, min_count=3, selected_users=None, use_cac
         page_count = get_book_page_count(book['url'])
         book['page_count'] = page_count
 
-        # Log progress periodically
-        if (i + 1) % 5 == 0 or i == len(popular_books) - 1:
-            print(f"Fetched page counts for {i + 1}/{len(popular_books)} popular books")
+        # Report progress periodically
+        if (i + 1) % 1 == 0:
+            percent = int(10 + (i + 1) * 80 / total_popular)  # phase 2 spans ~10%-90%
+            _emit(f"Fetched page counts for {i + 1}/{len(popular_books)} popular books", percent=percent, stage='phase2_progress')
 
     # Format the result
     result = []
@@ -348,15 +364,7 @@ def find_popular_books_data(user_data, min_count=3, selected_users=None, use_cac
             'user_count': len(book['users'])
         })
 
-    print(f"Found {len(result)} books that match the criteria (min_count={min_count})")
-
-    # Log the book list in console
-    print("\n======================================================================")
-    print("BOOK LIST:")
-    print("======================================================================")
-    for i, book in enumerate(result):
-        print(f"{i+1}. {book['title']} by {book['author']} - {book['page_count']} pages - {book['user_count']} users: {', '.join(book['users'])}")
-    print("======================================================================\n")
+    _emit(f"Found {len(result)} books that match the criteria (min_count={min_count})", percent=100, stage='done', extra={'count': len(result)})
 
     # Save results to cache if caching is enabled
     if use_cache:

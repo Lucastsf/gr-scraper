@@ -3,6 +3,7 @@
   "rewrites": [
     { "source": "/", "destination": "/src/templates/index.html" },
     { "source": "/get_popular_books", "destination": "https://gr-scraper.onrender.com/get_popular_books" },
+    { "source": "/get_popular_books_stream", "destination": "https://gr-scraper.onrender.com/get_popular_books_stream" },
     { "source": "/get_top_books", "destination": "https://gr-scraper.onrender.com/get_top_books" },
     { "source": "/clear_cache", "destination": "https://gr-scraper.onrender.com/clear_cache" },
     { "source": "/users", "destination": "https://gr-scraper.onrender.com/users" }

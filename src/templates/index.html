@@ -265,6 +265,29 @@
             color: #7f8c8d;
             font-size: 0.9em;
         }
+        .progress-log {
+            margin-top: 10px;
+            background-color: #fff;
+            border-radius: 6px;
+            border: 1px solid #eee;
+            padding: 10px;
+            max-height: 200px;
+            overflow: auto;
+            font-size: 0.9em;
+        }
+        .progress-bar-wrap {
+            height: 6px;
+            background-color: #ecf0f1;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0;
+            background-color: #3498db;
+            transition: width 0.2s ease;
+        }
     </style>
 </head>
 <body>
@@ -321,6 +344,11 @@
                 <button id="add-user">Add User</button>
                 <button id="delete-selected-users">Delete Selected</button>
                 <span id="user-action-message" class="user-action-message"></span>
+            </div>
+            <div class="progress-log" id="progress-log" style="display:none">
+                <div><strong>Progress</strong></div>
+                <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+                <div id="progress-lines"></div>
             </div>
         </div>
 
@@ -385,6 +413,9 @@
             const addUserBtn = document.getElementById('add-user');
             const deleteSelectedBtn = document.getElementById('delete-selected-users');
             const userActionMessage = document.getElementById('user-action-message');
+            const progressLog = document.getElementById('progress-log');
+            const progressBar = document.getElementById('progress-bar');
+            const progressLines = document.getElementById('progress-lines');
 
             // Short Reads Tab Elements
             const userSelect = document.getElementById('user-select');
@@ -516,29 +547,77 @@
             // Track current request to allow cancellation
             let currentController = null;
 
+            function startProgressUI() {
+                progressLog.style.display = 'block';
+                progressBar.style.width = '0%';
+                progressLines.innerHTML = '';
+            }
+            function addProgressLine(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                progressLines.appendChild(div);
+                progressLines.parentElement.scrollTop = progressLines.parentElement.scrollHeight;
+            }
+            function setProgress(percent) {
+                if (typeof percent === 'number') {
+                    progressBar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+                }
+            }
+            function hideProgressUI() {
+                // Keep the log visible; you can hide if preferred
+            }
+
             // Function to fetch books with retry logic
             async function fetchBooksWithRetry(queryString, retryCount = 0) {
                 try {
-                    // Update loading indicator with retry information if applicable
-                    if (retryCount > 0) {
+                    // Use SSE when cache is disabled to get real-time progress
+                    const useCache = useCacheCheckbox.checked;
+                    if (!useCache && !!window.EventSource) {
+                        startProgressUI();
                         bookContainer.innerHTML = `
                             <div class="loading">
-                                Loading books... (Retry ${retryCount}/${MAX_RETRIES})
-                                <div class="loading-progress">
-                                    <div class="loading-bar" style="width: 0%"></div>
-                                </div>
+                                Loading books with live progress...
                             </div>
                         `;
-                    } else {
-                        bookContainer.innerHTML = `
-                            <div class="loading">
-                                Loading books...
-                                <div class="loading-progress">
-                                    <div class="loading-bar" style="width: 0%"></div>
-                                </div>
-                            </div>
-                        `;
+
+                        const sseUrl = `/get_popular_books_stream?${queryString}`;
+                        const es = new EventSource(sseUrl);
+                        es.onmessage = (evt) => {
+                            try {
+                                const payload = JSON.parse(evt.data);
+                                if (payload.type === 'progress') {
+                                    if (payload.message) addProgressLine(payload.message);
+                                    if (payload.percent != null) setProgress(payload.percent);
+                                } else if (payload.type === 'done') {
+                                    es.close();
+                                    books = payload.books || [];
+                                    setProgress(100);
+                                    addProgressLine('Done');
+                                    sortBooks();
+                                } else if (payload.type === 'error') {
+                                    es.close();
+                                    bookContainer.innerHTML = `<div class="error">Error: ${payload.error || 'Unknown error'}</div>`;
+                                }
+                            } catch (e) {
+                                // ignore parse errors for keepalive events
+                            }
+                        };
+                        es.onerror = () => {
+                            // Let browser retry or close
+                            es.close();
+                        };
+                        return; // SSE path returns here
                     }
+
+                    // Fallback: existing fetch flow
+                    bookContainer.innerHTML = `
+                        <div class="loading">
+                            Loading books...
+                            <div class="loading-progress">
+                                <div class="loading-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    `;
 
                     // Simulate progress updates
                     const loadingBar = document.querySelector('.loading-bar');

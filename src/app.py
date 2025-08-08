@@ -6,6 +6,8 @@ import time
 import logging
 from datetime import datetime
 import os
+import threading
+import queue
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -185,6 +187,55 @@ def get_popular_books():
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
         response.status_code = 500
         return response
+
+@app.route('/get_popular_books_stream', methods=['GET'])
+def get_popular_books_stream():
+    """Server-Sent Events stream for popular books with progress updates."""
+    min_count = request.args.get('min_count', 3, type=int)
+    selected_users = request.args.getlist('users')
+    use_cache = request.args.get('use_cache', 'true').lower() == 'true'
+
+    logger.info(f"SSE request: min_count={min_count}, users={selected_users}, use_cache={use_cache}")
+
+    q: queue.Queue = queue.Queue()
+
+    def on_progress(evt: dict):
+        try:
+            q.put({'type': 'progress', **evt})
+        except Exception:
+            pass
+
+    def worker():
+        try:
+            books = bookclub.find_popular_books_data(
+                bookclub.user_data,
+                min_count=min_count,
+                selected_users=selected_users,
+                use_cache=use_cache,
+                on_progress=on_progress
+            )
+            q.put({'type': 'done', 'books': books, 'timestamp': datetime.now().isoformat()})
+        except Exception as e:
+            q.put({'type': 'error', 'error': str(e)})
+        finally:
+            q.put(None)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    def event_stream():
+        # initial ping
+        yield 'data: {"type":"start"}\n\n'
+        while True:
+            item = q.get()
+            if item is None:
+                break
+            yield f"data: {json.dumps(item)}\n\n"
+
+    response = Response(stream_with_context(event_stream()), mimetype='text/event-stream')
+    response.headers.add('Cache-Control', 'no-cache')
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    return response
 
 @app.route('/get_top_books', methods=['GET'])
 def get_top_books():
